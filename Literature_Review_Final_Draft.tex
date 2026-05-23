@@ -84,10 +84,10 @@ Three measures support reproducibility. First, every included paper is cited wit
 
 \section{Results}
 
-\noindent\textbf{Key message.} The literature splits into two cliques that rarely cite each other. A sensitivity-first clique (George and Huerta 2018; Gabbard et al. 2018; Krastev 2020; Schäfer et al. 2023; Dax et al. 2021; Chaturvedi et al. 2022) shows that deep learning can match matched filtering, but only on GPU. A deployment-first clique (David et al. 2021; Banbury et al. 2021; Gholami et al. 2021; Jacob et al. 2018; Hinton et al. 2015) shows that aggressive compression is feasible, but evaluates models on images, audio, or generic benchmarks rather than on astrophysical strain. Sitting between the two are critical papers (Gebhard et al. 2019; Abbott et al. 2016; Abbott et al. 2020) that warn the resulting models are fragile in ways simple accuracy metrics cannot detect. Table \ref{tab:tradeoffs} maps each included paper onto this trade-off space.
+\noindent\textbf{Key message.} The literature splits into two cliques that rarely cite each other. A sensitivity-first clique (George and Huerta 2018; Gabbard et al. 2018; Krastev 2020; Schäfer et al. 2023; Dax et al. 2021; Chaturvedi et al. 2022) shows that deep learning can match matched filtering, but only on GPU. A deployment-first clique (David et al. 2021; Banbury et al. 2021; Gholami et al. 2021; Jacob et al. 2018; Hinton et al. 2015) shows that aggressive compression is feasible, but evaluates models on images, audio, or generic benchmarks rather than on astrophysical strain. Sitting between the two are critical papers (Gebhard et al. 2019; Abbott et al. 2016; Abbott et al. 2020) that warn the resulting models are fragile in ways simple accuracy metrics cannot detect. Mapped onto contribution axes the 18 papers split roughly seven on sensitivity, six on efficiency, and three on robustness; only Qi et al.\ (2024) and Chaturvedi et al.\ (2022) contribute primarily on more than one, and no paper contributes primarily on all three. Figure \ref{fig:bitwidth} projects the same literature onto the axes the proposal's hypothesis actually lives on: weight precision and sensitivity preservation.
 
 \subsection{The sensitivity-first clique}
-George and Huerta (2018) and Gabbard et al. (2018) form the foundation of ML-based GW detection, and they appeared independently within weeks of each other. Both show that a relatively shallow one-dimensional CNN can recover binary black hole (BBH) signals from Advanced LIGO strain at sensitivity comparable to matched filtering. They are best read as a clique rather than as separate contributions. They converge on the same architectural choice (deep 1-D convolutions over whitened strain) and report the same null result (no measurable loss of true-positive rate at high SNR). Their joint claim is stronger than either paper alone.
+George and Huerta (2018) and Gabbard et al.\ (2018) form the foundation of ML-based GW detection. Both show that a relatively shallow one-dimensional CNN can recover binary black hole (BBH) signals from Advanced LIGO strain at sensitivity comparable to matched filtering. They are best read as a clique: they converge on the same architectural choice (deep 1-D convolutions over whitened strain) and report the same null result (no measurable loss of true-positive rate at high SNR), so their joint claim is stronger than either paper alone.
 
 Krastev (2020) extended the design to binary neutron star (BNS) signals, and in doing so exposed a weakness the BBH papers had concealed. BNS waveforms are an order of magnitude longer in the detector band, so the receptive field of any TinyML candidate model has to grow proportionally. That requirement runs directly into the SRAM budget assumed by David et al. (2021).
 
@@ -109,39 +109,78 @@ Gebhard et al. (2019) is the critical pivot of the review. It re-examines the Ge
 Abbott et al. (2016) catalogue the morphology of ``blip'' transients in real LIGO data. These are exactly the kind of high-amplitude, short-duration response a quantised CNN is most likely to misclassify. Abbott et al. (2020) document the data-quality vetoes the LVK collaboration uses to mitigate them offline. The implication is uncomfortable for TinyML. If FP32 networks are already adversarially fragile, then INT8 quantisation, which is itself a structured, deterministic perturbation of the network's response surface, is more likely to amplify that fragility than to be neutral to it. None of the deployment-first papers acknowledge this adversarial-noise literature. That is a serious omission.
 
 \subsection{Toward signal-preserving TinyML}
-Cuoco et al. (2021) provide the earlier of two field-shaping reviews of ML in GW science; Cuoco et al. (2024) extend that coverage to current detectors. Neither devotes more than a paragraph to sub-watt deployment. The methodological building blocks for closing the gap already exist. Hinton et al.'s (2015) distillation framework supplies the training objective. Jacob et al.'s (2018) integer-only inference and Gholami et al.'s (2021) QAT taxonomy supply the quantisation machinery. What the literature does not contain is a composition of those blocks under astrophysical, rather than computer-vision, loss functions. Murphy et al.'s (2021) work on the EIRSAT-1 CubeSat gamma-ray detector illustrates the deployment niche the proposal is aimed at. It is the kind of compact, autonomous, downlink-constrained instrument for which on-board triggering is a hard operational requirement, not a research curiosity.
+Cuoco et al.\ (2021) provide the earlier of two field-shaping reviews of ML in GW science; Cuoco et al.\ (2024) extend that coverage to current detectors. Neither devotes more than a paragraph to sub-watt deployment. The methodological building blocks for closing the gap already exist. Hinton et al.'s (2015) distillation framework supplies the training objective. Jacob et al.'s (2018) integer-only inference and Gholami et al.'s (2021) QAT taxonomy supply the quantisation machinery. What the literature does not contain is a composition of those blocks under astrophysical, rather than computer-vision, loss functions. Murphy et al.'s (2021) work on the EIRSAT-1 CubeSat gamma-ray detector illustrates the deployment niche the proposal is aimed at: a compact, autonomous, downlink-constrained instrument where on-board triggering is operationally required.
 
-\begin{table}[!htbp]
+\subsection{The wrong benchmark}
+The sensitivity-first clique evaluates ML detectors by parity with matched filtering at fixed FAR. That benchmark is appropriate for a confirmation pipeline, but a trigger is not a confirmation pipeline. In a production GW analysis the trigger only needs to flag candidate windows cheaply enough that a second, higher-precision stage can re-do the heavy work. Matched-filter parity at the trigger stage is therefore over-specification, and the FP32 assumption that lets the clique meet that bar is exactly what blocks the move to TinyML. Reading Qi et al.\ (2024) through this lens changes the interpretation of their INT8 BNS result. The reported sensitivity loss is a failure only against the matched-filter-parity benchmark. Against a hierarchical-trigger benchmark, where the relevant metric is candidate recall conditional on a tractable downstream load, the same result is a partial success, provided the trigger preserves enough phase information to feed the second stage. This is the operational meaning of ``signal-preserving'' that the literature has not articulated, and it is the reason the empty region in Figure \ref{fig:bitwidth} is empty: the clique that should be filling it is optimising for the wrong target.
+
+\begin{figure}[!htbp]
 \centering
-\caption{Trade-off positions of the 18 included papers along three axes (\checkmark{} = primary contribution; $\circ$ = secondary; --- = not addressed).}
-\label{tab:tradeoffs}
-\begin{tabular}{lccc}
-\toprule
-\textbf{Paper} & \textbf{Sensitivity} & \textbf{Efficiency} & \textbf{Robustness/Noise} \\
-\midrule
-George and Huerta 2018 & \checkmark & --- & --- \\
-Gabbard et al. 2018 & \checkmark & --- & --- \\
-Krastev 2020 & \checkmark & $\circ$ & --- \\
-Schäfer et al. 2023 & \checkmark & --- & $\circ$ \\
-Dax et al. 2021 & \checkmark & $\circ$ & --- \\
-Chaturvedi et al. 2022 & \checkmark & \checkmark & --- \\
-Qi et al. 2024 & \checkmark & \checkmark & $\circ$ \\
-Gebhard et al. 2019 & $\circ$ & --- & \checkmark \\
-Abbott et al. 2016 & --- & --- & \checkmark \\
-Abbott et al. 2020 & $\circ$ & --- & \checkmark \\
-David et al. 2021 & --- & \checkmark & --- \\
-Banbury et al. 2021 & --- & \checkmark & --- \\
-Gholami et al. 2021 & --- & \checkmark & $\circ$ \\
-Jacob et al. 2018 & --- & \checkmark & --- \\
-Hinton et al. 2015 & $\circ$ & \checkmark & --- \\
-Cuoco et al. 2021 & $\circ$ & --- & $\circ$ \\
-Cuoco et al. 2024 & $\circ$ & $\circ$ & $\circ$ \\
-Murphy et al. 2021 & --- & \checkmark & --- \\
-\bottomrule
-\end{tabular}
-\end{table}
+\begin{tikzpicture}[font=\footnotesize]
 
-\noindent Table \ref{tab:tradeoffs} maps the literature onto three axes. The region of the table that should hold papers simultaneously strong on astrophysical sensitivity, embedded efficiency, and noise robustness is empty. That empty region is the research gap the proposal targets.
+  % --- axes ---
+  \draw[->, thick] (0,0) -- (10.5,0);
+  \draw[->, thick] (0,0) -- (0,6.4);
+
+  % x-axis ticks (log-spaced bitwidths)
+  \foreach \x/\bits in {1/4, 3/8, 6/16, 9/32} {
+    \draw[thick] (\x,0) -- (\x,-0.15);
+    \node[below] at (\x,-0.2) {\bits};
+  }
+  \node[below, align=center] at (5,-0.8) {weight precision (bits)};
+
+  % y-axis ticks (sensitivity preserved vs FP32 baseline)
+  \foreach \y/\pct in {1.0/50, 2.5/70, 4.0/85, 5.5/100} {
+    \draw[thick] (-0.15,\y) -- (0,\y);
+    \node[left] at (-0.2,\y) {\pct\%};
+  }
+  \node[rotate=90, anchor=south] at (-1.4,3.2) {sensitivity preserved vs FP32 baseline};
+
+  % FP32 baseline line
+  \draw[dashed, gray!60] (0,5.5) -- (10,5.5);
+  \node[gray, right, font=\scriptsize] at (9.5,5.7) {FP32};
+
+  % --- target / empty region ---
+  \fill[green!15] (0.3,4.4) rectangle (3.6,5.6);
+  \draw[green!50!black, thick, dashed] (0.3,4.4) rectangle (3.6,5.6);
+  \node[green!40!black, font=\scriptsize\bfseries, align=center] at (1.95,6.05) {empty region};
+  \node[green!40!black, font=\scriptsize, align=center] at (1.95,4.15) {(sub-watt INT8 BNS)};
+
+  % --- BBH curve (solid blue) ---
+  \draw[blue, thick] plot[smooth, tension=0.5] coordinates {(9,5.5) (6,5.45) (3,5.30) (1,3.6)};
+  \node[blue, font=\scriptsize] at (7.4,5.25) {BBH (reported)};
+
+  % --- BNS curve (dashed red) ---
+  \draw[red, thick, dashed] plot[smooth, tension=0.5] coordinates {(9,5.5) (6,5.05) (3,3.0) (1,1.0)};
+  \node[red, font=\scriptsize] at (7.4,4.7) {BNS (conjectured)};
+
+  % --- paper anchor points ---
+  % BBH at FP32: George & Huerta 2018, Gabbard 2018
+  \fill[blue] (9,5.5) circle (3pt);
+  \node[blue, above right, font=\scriptsize] at (9.05,5.55) {G\&H, Gabbard};
+
+  % BNS at FP32: Krastev
+  \fill[red] (9,5.42) circle (3pt);
+  \node[red, below right, font=\scriptsize] at (9.05,5.30) {Krastev};
+
+  % Chaturvedi 2022: mixed FP16/INT8 BBH
+  \fill[blue] (4,5.36) circle (3pt);
+  \node[blue, above, font=\scriptsize] at (4,5.55) {Chaturvedi};
+
+  % Qi 2024: INT8 BNS FPGA, reported degradation
+  \fill[red] (3,3.0) circle (3pt);
+  \node[red, right, font=\scriptsize] at (3.15,2.95) {Qi 2024};
+
+  % Jacob 2018: INT8 ImageNet (cross-domain reference)
+  \fill[gray!70] (3,5.30) circle (3pt);
+  \node[gray, below, font=\scriptsize] at (3,5.0) {Jacob (CV ref.)};
+
+\end{tikzpicture}
+\caption{Synthesis of reported and conjectured sensitivity preservation as a function of weight precision, drawn from the 18 included papers. BBH classification (blue, solid) holds close to the FP32 baseline through INT8 in both the GW literature (Chaturvedi et al.\ 2022, TensorRT mixed FP16/INT8) and the wider quantisation literature (Jacob et al.\ 2018 on ImageNet, plotted in grey as a cross-domain reference). BNS sensitivity (red, dashed) degrades more sharply: Qi et al.\ (2024) is the single empirical INT8 anchor in the GW literature, and the extrapolation toward 4-bit follows the proposal's phase-coherence hypothesis. The shaded green region (INT8 or below, BNS-class sensitivity preserved, on a sub-watt microcontroller budget) is the target operating zone and contains no published work in the included set. The figure is a synthesis sketch, not an original experimental result.}
+\label{fig:bitwidth}
+\end{figure}
+
+\noindent The empty green region in Figure \ref{fig:bitwidth}, not the absence of any single paper, is the research gap PC-KD (\S4.3) is designed to fill.
 
 \FloatBarrier
 
@@ -150,19 +189,24 @@ Murphy et al. 2021 & --- & \checkmark & --- \\
 \noindent\textbf{Key message.} The literature contains every ingredient required for signal-preserving TinyML, but no published work composes those ingredients under astrophysical loss functions. The single FPGA-class deployment in the included set (Qi et al. 2024) already shows that naive INT8 erodes BNS sensitivity. The gap is therefore one of evaluation discipline as much as of technique.
 
 \subsection{Principal results}
-Three findings emerge. First, deep learning has reached parity with matched filtering for high-SNR BBH signals (George and Huerta 2018; Gabbard et al. 2018; Schäfer et al. 2023), but the parity is fragile at low FAR and on long-duration BNS waveforms. Second, the embedded-ML literature measures the cost of quantisation in classification accuracy (Jacob et al. 2018; Gholami et al. 2021; Banbury et al. 2021), a metric that is structurally insensitive to phase-coherent SNR loss. Third, the only FPGA-class GW deployment in the included set (Qi et al. 2024) demonstrates that naive quantisation degrades sensitivity in exactly the regime that edge triggers were meant to enable.
+Four findings emerge. First, deep learning has reached parity with matched filtering for high-SNR BBH signals (George and Huerta 2018; Gabbard et al.\ 2018; Schäfer et al.\ 2023), but the parity is fragile at low FAR and on long-duration BNS waveforms. Second, the embedded-ML literature measures the cost of quantisation in classification accuracy (Jacob et al.\ 2018; Gholami et al.\ 2021; Banbury et al.\ 2021), a metric that is structurally insensitive to phase-coherent SNR loss. Third, the only FPGA-class GW deployment in the included set (Qi et al.\ 2024) demonstrates that naive quantisation degrades sensitivity in exactly the regime that edge triggers were meant to enable. Fourth, the matched-filter-parity benchmark on which the sensitivity-first clique is judged is itself the wrong target for an edge trigger, which operates as a cheap first stage in a hierarchical pipeline; under that reframing Qi et al.\ (2024) is a partial success rather than a failure.
 
 \subsection{Limitations}
-Three limitations should be flagged. The 18-paper cap forced the exclusion of several adjacent works, in particular recent mixed-precision FPGA inference outside astronomy and the emerging transformer-based GW pipelines. These are present in the discipline but not in the in-depth synthesis here. Some of the most recent work cited is at arXiv-preprint stage, which means peer-review status varies. The clique mapping in Table \ref{tab:tradeoffs} is a coarse abstraction; many papers contribute incrementally across more than one axis, and the \checkmark{}/$\circ$/--- encoding suppresses that nuance.
+Three limitations should be flagged. The 18-paper cap forced the exclusion of several adjacent works, in particular recent mixed-precision FPGA inference outside astronomy and the emerging transformer-based GW pipelines. These are present in the discipline but not in the in-depth synthesis here. Some of the most recent work cited is at arXiv-preprint stage, which means peer-review status varies. The synthesis in Figure \ref{fig:bitwidth} is a coarse projection of a multi-dimensional problem onto two axes: it suppresses activation precision, per-layer mixed-precision schemes, calibration choices, and the heterogeneity inside the BBH and BNS categories. The BNS curve in particular is hypothesised from a single empirical anchor (Qi et al.\ 2024) and will need to be re-drawn as more INT8 BNS deployments are published.
 
-\subsection{Proposed future work}
-The empty region of Table \ref{tab:tradeoffs} suggests four concrete research directions, each of them addressable within the proposal's experimental design. First, define an \textit{astrophysical loss} that penalises SNR-loss directly rather than cross-entropy, building on Hinton et al.'s (2015) distillation objective. Second, generalise Chaturvedi et al.'s (2022) mixed-precision strategy from GPU TensorRT to microcontroller-class INT8/INT16 kernels, keeping FP16 (or INT16) precision in the phase-sensitive early-warning layers Krastev (2020) identified. Third, transfer Gebhard et al.'s (2019) adversarial-robustness diagnostics into the embedded setting; treat INT8 quantisation as a structured perturbation, and stress-test the model against real LIGO glitch morphologies (Abbott et al. 2016; Abbott et al. 2020). Fourth, build a benchmark in the spirit of MLPerf Tiny (Banbury et al. 2021), but parameterised by astrophysical reach rather than by top-1 accuracy.
+\subsection{Proposed future work: Phase-Coherence-Weighted Knowledge Distillation}
+The empty region of Figure \ref{fig:bitwidth} and the reframing of \S3.6 motivate a specific named contribution that this review identifies as the methodological piece the literature is missing. \textit{Phase-Coherence-Weighted Knowledge Distillation} (PC-KD) is a distillation objective in which the student loss is weighted sample-by-sample by the time-frequency phase coherence of the input window against a chirp template. Quantisation noise injected in low-coherence regions of the signal is penalised softly. Quantisation noise injected at the merger ringdown, where phase information dominates SNR, is penalised hard. Concretely,
+\begin{equation}
+\mathcal{L}_{\text{PC-KD}}(x) \;=\; \alpha \, \mathrm{KL}\big( p_T(x) \,\|\, p_S(x) \big) \;+\; \beta \, w(x) \, \big\| f_T(x) - f_S(x) \big\|^2,
+\label{eq:pckd}
+\end{equation}
+where $p_T, p_S$ are teacher and student class probabilities, $f_T, f_S$ are their penultimate-layer feature maps (after Hinton et al.\ 2015), and $w(x)$ is an instantaneous phase-coherence weight derived from a matched-filter pre-pass against a coarse template bank. The four research directions implied by the gap analysis are best understood as components of building PC-KD: an astrophysical loss in place of cross-entropy is the first term of Equation \ref{eq:pckd}; a microcontroller-class mixed-precision deployment after Chaturvedi et al.\ (2022) is the target the student is compressed for; the adversarial-robustness diagnostics of Gebhard et al.\ (2019) are the stress test the student must pass under real LIGO glitches (Abbott et al.\ 2016; Abbott et al.\ 2020); and an MLPerf-Tiny-style benchmark (Banbury et al.\ 2021) parameterised by astrophysical reach is the yardstick by which PC-KD is scored against the naive INT8 baseline of Qi et al.\ (2024).
 
 \subsection{Comparison with prior work}
-Cuoco et al. (2021; 2024) are the most comprehensive prior reviews of ML in GW science, but both treat hardware deployment as a downstream engineering concern and devote little space to bit-width effects. The textbook and benchmark literature on the TinyML side surveys the embedded landscape with equal authority and no astrophysical content: Warden and Situnayake (2019) on the production side, and more recent on-device inference work such as Lin et al. (2020) on MCUNet. Sze et al. (2017) survey efficient hardware processing of deep networks with similar scope, again without a GW application. This review occupies the intersection between the two literatures, and treats that intersection as the problem. Critical mid-clique papers (Gebhard et al. 2019; Qi et al. 2024) are used as load-bearing evidence rather than as decorative citations. The framing departs from the black-box accuracy tradition of conventional model-compression surveys (Gholami et al. 2021; Jacob et al. 2018) by foregrounding adversarial fragility (Gebhard et al. 2019) and the morphology of detector noise (Abbott et al. 2016).
+Cuoco et al.\ (2021; 2024) are the most comprehensive prior reviews of ML in GW science, but both treat hardware deployment as downstream engineering and devote little space to bit-width effects. On the TinyML side, Warden and Situnayake (2019), Lin et al.\ (2020) on MCUNet, and Sze et al.\ (2017) on efficient hardware inference survey the embedded landscape with equal authority and no astrophysical content. This review differs in two ways. It occupies the intersection of the two literatures and treats the intersection itself as the problem, with Gebhard et al.\ (2019) and Qi et al.\ (2024) carrying the load. And it goes beyond surveying: \S3.6 reframes the matched-filter-parity benchmark of the sensitivity-first clique, and \S4.3 proposes PC-KD as a named methodological contribution rather than a generic ``future work'' bullet.
 
 \subsection{Conclusions}
-Putting TinyML into gravitational-wave detection is a prerequisite for the next generation of multi-messenger observatories. It cannot be done by stacking off-the-shelf compression on top of off-the-shelf ML pipelines. Every ingredient already exists. Architectures that match matched filtering. Runtimes that fit in 256~KB. Quantisation procedures proven on millions of devices. Distillation that preserves teacher knowledge. What does not yet exist is a composition of those ingredients under the astrophysical metrics the science requires. That composition is the contribution proposed by Wasif (2026), and it is the work this review motivates.
+Putting TinyML into gravitational-wave detection is a prerequisite for the next generation of multi-messenger observatories. It cannot be done by stacking off-the-shelf compression on top of off-the-shelf ML pipelines, and it cannot be done while the sensitivity-first clique optimises for matched-filter parity instead of trigger-stage recall. Every ingredient already exists: architectures that match matched filtering, runtimes that fit in 256~KB, quantisation procedures proven on millions of devices, distillation that preserves teacher knowledge. What does not yet exist is a composition of those ingredients under astrophysical metrics. Phase-Coherence-Weighted Knowledge Distillation, as proposed in \S4.3 and adopted by Wasif (2026), is the missing piece this review identifies.
 
 \section{Self-Reflection}
 Generative AI was used in three separate roles during the preparation of this review: Google Gemini CLI throughout, and a single cross-checking pass with Anthropic Claude on the near-final draft. The first role was drafting. Zero-shot prompts produced rough section skeletons that were then heavily rewritten by hand. The second role was reference discovery, and this is where the work demanded the most discipline. An initial prompt (``list TinyML papers for gravitational wave detection'') returned a confident, plausible-looking list in which several of the DOIs turned out to be fabricated. Refining the prompt to ``list peer-reviewed FPGA implementations of CNNs for binary-neutron-star detection with arXiv IDs verifiable on arXiv.org'' returned a much shorter, more honest list, of which Qi et al.\ (2024) was the only verifiable hit. The third role was copy-editing on near-final paragraphs. The clear advantage of GenAI in this work was the speed of cross-walking between gravitational-wave physics and embedded-systems literature, two sub-disciplines that almost never cite each other. The clear disadvantage was the model's willingness to fabricate references, which on first contact would have produced a serious academic-integrity failure. The mitigation, and the lesson recorded for future work, was that every model-suggested reference was independently verified, and no claim was kept in the final draft without an author-checked source. One subtler failure mode became visible only late: when asked to summarise a paper I had not yet read, the model tended to over-state the strength of the paper's conclusions in ways quiet enough to survive casual review. The corrective for future literature work is to draft summaries from the PDFs first, and to use the model only for comparison or copy-editing afterwards.
