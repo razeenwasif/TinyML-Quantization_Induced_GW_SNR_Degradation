@@ -1,0 +1,11 @@
+# LaTeX Auxiliary Files
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.out
+*.synctex.gz
+
+# Editor & IDE state
+Session.vim
+.antigravitycli/
