@@ -1,0 +1,11 @@
+The 2021 survey by Gholami et al. provides a comprehensive taxonomy of the methods used to compress oversized neural networks for deployment in resource-constrained environments. As deep learning models have grown in parameter size, deploying them on edge devices with strict memory, latency, and power budgets has become a central challenge.
+
+**Key Technical Concepts and Taxonomies:**
+
+- **Quantization Fundamentals:** The paper defines quantization as the process of mapping continuous real-valued numbers to a fixed discrete set of lower-precision numbers, typically using a scaling factor and a zero-point integer. This transition from floating-point to 8-bit integer (INT8) or lower precision can reduce memory footprints and latency by up to 16x.
+    
+- **PTQ vs. QAT:** The survey draws a strict distinction between Post-Training Quantization (PTQ) and Quantization-Aware Training (QAT). PTQ determines clipping ranges and scaling factors without re-training the model, making it fast but prone to accuracy degradation. QAT mitigates this by fine-tuning the model using training data, applying the quantization operator during the forward pass while performing weight updates in floating-point.
+    
+- **The Gradient Mismatch Problem:** A major hurdle in QAT is that the quantization rounding operator is non-differentiable (its gradient is zero almost everywhere). To allow backpropagation, training frameworks typically employ a Straight Through Estimator (STE), which coarsely approximates the gradient by ignoring the rounding operation and passing it as an identity function.
+    
+- **Simulated vs. Integer-Only Quantization:** The authors highlight that many deployments use "simulated quantization," where parameters are stored in low precision but operations are executed in floating-point arithmetic after dequantization. For true edge deployment on microcontrollers (like the ARM Cortex-M), "integer-only" quantization is required, where all matrix multiplications and accumulations are executed using highly efficient, low-power integer arithmetic.
