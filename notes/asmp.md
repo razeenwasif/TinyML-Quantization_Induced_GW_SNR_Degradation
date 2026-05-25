@@ -81,7 +81,7 @@ Suppose a 1-D ResNet with 10 conv layers, all kernel size 9, stride 2 in the fir
 
 For BBH 30+30 the inspiral is ~1 second long in a 30+ Hz band. So layers 6–10 are inspiral-dominated and layers 1–3 are merger/ringdown-only. ASMP would say: 6–10 at INT16, 1–3 at INT8, 4–5 at the boundary.
 
-Same exercise for BNS would give a different schedule because the inspiral runs longer than any feasible input window — every layer is inspiral-dominated to some degree. ASMP for BNS may degenerate to "uniform INT16", which is interesting because it explains why Qi et al. (2024) report BNS degradation under naive uniform INT8.
+Same exercise for BNS would give a different schedule because the inspiral runs longer than any feasible input window — every layer is inspiral-dominated to some degree. ASMP for BNS may degenerate to "uniform INT16", which is interesting because it explains why Martins et al. (2025) report BNS degradation under naive uniform INT8.
 
 ### 2.4 The mapping recipe
 
@@ -335,7 +335,7 @@ Cortex-M55 with the Helium MVE extension has better mixed-precision support. Vec
 
 If MCU mixed-precision is too painful, an FPGA target (Xilinx Zynq, Lattice iCE40 Ultra) gives much more flexibility — per-layer bit-width is essentially free on FPGA because each layer can be a separate hardware block. This costs the "sub-watt MCU" framing of the proposal but salvages the ASMP story.
 
-The Qi et al. (2024) precedent makes FPGA a defensible target.
+The Martins et al. (2025) precedent makes FPGA a defensible target.
 
 ### 6.4 Fallback to per-channel scaling
 
@@ -350,7 +350,7 @@ If neither mixed-bitwidth nor FPGA is feasible, the weak version of ASMP is per-
 A claim like *"ASMP recovers $X\%$ of the FP32 sensitivity that uniform INT8 loses"* needs:
 
 - A FP32 baseline number (the teacher).
-- A uniform INT8 baseline number (the deployment-clique-style naive approach, which is what Qi et al.\ 2024 effectively did).
+- A uniform INT8 baseline number (the deployment-clique-style naive approach, which is what Martins et al.\ 2025 effectively did).
 - An ASMP number under the same training procedure (PC-KD or plain QAT).
 - All three measured on the same injection set, with the same FAR threshold, reported as both SNR-loss and distance reach.
 
@@ -393,8 +393,8 @@ The decision tree is: if any of these triggers fire, the thesis story shifts but
 
 Already in the LR (re-read with ASMP lens):
 
-1. **Qi et al.\ (2024)** — the BNS-on-FPGA paper. Read carefully for *which layers* of their CNN showed the most INT8 sensitivity. If they report per-layer numbers, the ASMP receptive-field hypothesis can be sanity-checked against their data before any new experiment runs.
-2. **Chaturvedi et al.\ (2022)** — TensorRT mixed FP16/INT8. Read for the *layer-fusion strategy* they use. Even though theirs is hardware-driven, the layers they choose to keep in FP16 are an interesting empirical signal.
+1. **Martins et al.\ (2025)** — the BNS-on-FPGA paper. Read carefully for *which layers* of their CNN showed the most INT8 sensitivity. If they report per-layer numbers, the ASMP receptive-field hypothesis can be sanity-checked against their data before any new experiment runs.
+2. **Chaturvedi et al.\ (2022)** — TensorRT FP16 mixed precision with graph-optimisation layer fusion. Read for the *layer-fusion strategy* they use. Even though theirs is hardware-driven, the layers they choose to keep in FP16 are an interesting empirical signal.
 3. **Krastev (2020)** — BNS detection. Read for the *receptive field* of his model and what fraction of the window is inspiral.
 4. **Jacob et al.\ (2018)** — STE and integer-only inference. Re-read with FakeQuant implementation in mind.
 5. **Hinton et al.\ (2015)** — distillation. Foundational, only needs a re-skim.
